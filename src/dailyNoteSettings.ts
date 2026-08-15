@@ -1,11 +1,22 @@
 import DailyNoteViewPlugin from "./dailyNoteViewIndex";
-import { App, debounce, PluginSettingTab, Setting, Modal } from "obsidian";
+import {
+    AbstractInputSuggest,
+    App,
+    debounce,
+    Modal,
+    PluginSettingTab,
+    Setting,
+    TFile,
+} from "obsidian";
 
 export interface DailyNoteSettings {
     hideFrontmatter: boolean;
     hideBacklinks: boolean;
     createAndOpenOnStartup: boolean;
     useArrowUpOrDownToNavigate: boolean;
+
+    embedNoteEnabled: boolean;
+    embedNotePath: string;
 
     preset: {
         type: "folder" | "tag";
@@ -18,6 +29,8 @@ export const DEFAULT_SETTINGS: DailyNoteSettings = {
     hideBacklinks: false,
     createAndOpenOnStartup: false,
     useArrowUpOrDownToNavigate: false,
+    embedNoteEnabled: false,
+    embedNotePath: "",
     preset: [],
 };
 
@@ -118,6 +131,41 @@ export class DailyNoteSettingTab extends PluginSettingTab {
                     })
             );
 
+        new Setting(containerEl)
+            .setName("Embed a note right after the latest daily note")
+            .setDesc(
+                "Embed the content of a configured note right after the latest daily note."
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(settings.embedNoteEnabled)
+                    .onChange(async (value) => {
+                        this.plugin.settings.embedNoteEnabled = value;
+                        this.applySettingsUpdate();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName("Note to embed")
+            .setDesc(
+                "Path or name of the note to Embed."
+            )
+            .addText((text) => {
+                text
+                    .setPlaceholder("Enter note path or name")
+                    .setValue(settings.embedNotePath);
+
+                new NoteInputSuggest(this.app, text.inputEl, (file) => {
+                    this.plugin.settings.embedNotePath = file.path;
+                    this.applySettingsUpdate();
+                });
+
+                text.onChange(async (value) => {
+                    this.plugin.settings.embedNotePath = value.trim();
+                    this.applySettingsUpdate();
+                });
+            });
+
         new Setting(containerEl).setName("Saved presets").setHeading();
 
         const presetContainer = containerEl.createDiv("preset-container");
@@ -182,6 +230,55 @@ export class DailyNoteSettingTab extends PluginSettingTab {
                         modal.open();
                     });
             });
+    }
+}
+
+// A type-ahead suggestion that lists vault notes matching the typed input
+class NoteInputSuggest extends AbstractInputSuggest<TFile> {
+    onSelectCb: (file: TFile) => void;
+
+    constructor(
+        app: App,
+        inputEl: HTMLInputElement,
+        onSelect: (file: TFile) => void
+    ) {
+        super(app, inputEl);
+        this.onSelectCb = onSelect;
+        this.limit = 30;
+    }
+
+    getSuggestions(query: string): TFile[] {
+        const files = this.app.vault.getMarkdownFiles().sort((a, b) =>
+            a.basename.localeCompare(b.basename)
+        );
+
+        const normalized = query.trim().toLowerCase();
+        if (!normalized) {
+            return files.slice(0, this.limit);
+        }
+
+        return files
+            .filter(
+                (file) =>
+                    file.basename.toLowerCase().includes(normalized) ||
+                    file.path.toLowerCase().includes(normalized)
+            )
+            .slice(0, this.limit);
+    }
+
+    renderSuggestion(value: TFile, el: HTMLElement) {
+        const content = el.createDiv("suggestion-content");
+        content.createDiv("suggestion-title").setText(value.basename);
+        content.createDiv({
+            cls: "suggestion-note-path",
+            text: value.path,
+        });
+    }
+
+    selectSuggestion(value: TFile, evt: MouseEvent | KeyboardEvent) {
+        this.setValue(value.path);
+        this.onSelectCb(value);
+        this.close();
     }
 }
 

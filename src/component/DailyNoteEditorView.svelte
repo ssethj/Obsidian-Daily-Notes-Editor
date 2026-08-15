@@ -4,6 +4,7 @@
 
     import { TFile, moment } from "obsidian";
     import DailyNote from "./DailyNote.svelte";
+    import EmbeddedNote from "./EmbeddedNote.svelte";
     import { inview } from "svelte-inview";
     import { TimeRange, SelectionMode, TimeField } from "../types/time";
     import { onMount } from "svelte";
@@ -278,7 +279,10 @@
             </div>
         </div>
     {/if}
-    {#each renderedFiles as file (file.path)}
+    {#each renderedFiles as file, i (file.path)}
+        {#if i === 1 && plugin.settings.embedNoteEnabled && plugin.settings.embedNotePath}
+            <EmbeddedNote plugin={plugin} notePath={plugin.settings.embedNotePath} />
+        {/if}
         <div class="daily-note-wrapper" use:inview={{
             rootMargin: "80%",
             unobserveOnEnter: false,
