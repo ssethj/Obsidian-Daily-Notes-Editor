@@ -42,6 +42,39 @@
         }
     }
 
+    // MarkdownRenderer.render() does not attach link-click handlers by
+    // itself (that wiring lives in Obsidian's real preview views). Without
+    // this handler a clicked wikilink performs the anchor's default browser
+    // navigation, and since the href has no matching app:// route Obsidian
+    // reloads the whole app window. Intercept the click and open the link
+    // through the workspace API instead.
+    function handleNoteLinkClick(ev: MouseEvent, sourcePath: string) {
+        if (ev.button !== 0 && ev.button !== 1) return;
+
+        const target = ev.target as Element | null;
+        if (!target) return;
+
+        const link = target.closest("a.internal-link") as
+            | HTMLAnchorElement
+            | null;
+        if (!link) return;
+
+        const linkText =
+            link.getAttribute("data-href") ?? link.getAttribute("href");
+        if (!linkText) return;
+
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        if (ev.altKey) {
+            plugin.app.workspace.openLinkText(linkText, sourcePath, "split");
+        } else {
+            // Always open in a new tab so the linked note does not replace
+            // the Daily Notes editor view.
+            plugin.app.workspace.openLinkText(linkText, sourcePath, "tab");
+        }
+    }
+
     async function renderNote() {
         if (!containerEl || !notePath) return;
 
@@ -81,6 +114,15 @@
             file.path,
             newComponent
         );
+
+        // Make the freshly rendered wikilinks clickable without the "default
+        // anchor navigation reloads the app" problem. Registered on the render
+        // component so it is detached automatically when the note unloads.
+        newComponent.registerDomEvent(
+            containerEl,
+            "click",
+            (ev: MouseEvent) => handleNoteLinkClick(ev, file.path)
+        );
     }
 
     // Single entry point: fires on mount (once containerEl is bound) and
@@ -95,10 +137,6 @@
             renderComponent = null;
         }
     });
-
-    $: if (containerEl && notePath) {
-        renderNote();
-    }
 </script>
 
 {#if notePath}
