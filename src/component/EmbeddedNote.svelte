@@ -141,18 +141,6 @@
 
 {#if notePath}
     <div class="daily-note-wrapper embedded-note">
-        <div class="daily-note-title embedded-note-title inline-title">
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <!-- svelte-ignore a11y-interactive-supports-focus -->
-            <span role="link" class="embedded-note-label">Embedded:</span>
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <!-- svelte-ignore a11y-interactive-supports-focus -->
-            <span
-                role="link"
-                class="clickable-link"
-                on:click={handleTitleClick}
-            >{title || notePath}</span>
-        </div>
         <div class="embedded-note-content" bind:this={containerEl}>
             {#if error}
                 <div class="embedded-note-error">{error}</div>
@@ -175,6 +163,13 @@
         color: var(--text-muted);
         font-weight: 500;
         margin-bottom: var(--size-4-4);
+
+        /* Align with the daily-note title rows: same centered readable
+           line-width column used by the real editors. */
+        width: calc(var(--file-line-width) + var(--size-4-4));
+        max-width: calc(var(--file-line-width) + var(--size-4-4));
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .embedded-note-label {
@@ -186,6 +181,12 @@
 
     .embedded-note-content {
         min-height: 24px;
+
+        /* Match the daily-note editors, which center their body text at the
+           readable line width (var(--file-line-width)). */
+        max-width: var(--file-line-width);
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .embedded-note-content > :global(.markdown-preview-view) {
