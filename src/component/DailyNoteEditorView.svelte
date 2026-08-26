@@ -280,9 +280,6 @@
         </div>
     {/if}
     {#each renderedFiles as file, i (file.path)}
-        {#if i === 1 && plugin.settings.embedNoteEnabled && plugin.settings.embedNotePath}
-            <EmbeddedNote plugin={plugin} notePath={plugin.settings.embedNotePath} />
-        {/if}
         <div class="daily-note-wrapper" use:inview={{
             rootMargin: "80%",
             unobserveOnEnter: false,
@@ -295,6 +292,9 @@
                 shouldRender={visibleNotes.has(file.path)}
             />
         </div>
+        {#if i === 0 && plugin.settings.embedNoteEnabled && plugin.settings.embedNotePath}
+            <EmbeddedNote plugin={plugin} notePath={plugin.settings.embedNotePath} />
+        {/if}
     {/each}
     <div bind:this={loaderRef} class="dn-view-loader" use:inview={{
         root: leaf.view.containerEl
